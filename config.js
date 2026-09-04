@@ -5,10 +5,10 @@ window.FLUID_CONFIG = {
   FORCE: 520,
   SPLAT_RADIUS: 0.018,
   VELOCITY_DISSIPATION: 0.992,
-  DYE_DISSIPATION: 0.986,
-  COLOR_SLOW: "#002338",
-  COLOR_FAST: "#19beff",
-  HIGHLIGHT: "#fff2d2",
+  DYE_DISSIPATION: 0.9986,
+  COLOR_SLOW: "#3b7eb4",
+  COLOR_FAST: "#1975ff",
+  HIGHLIGHT: "#fff2fd",
   HIGHLIGHT_AMOUNT: 0.1,
   DYE_AMOUNT: 1.35,
 
@@ -19,7 +19,7 @@ window.FLUID_CONFIG = {
   // "ink"       = lerp between background and pigment
   // "multiply"  = Photoshop-style multiply
   // "pigment"   = subtractive-ish pigment mixing
-  BLEND_MODE: "",
+  BLEND_MODE: "ink",
 
   // Controls how strongly the dye covers/darkens the background.
   // Mostly used by ink, multiply, and pigment modes.
