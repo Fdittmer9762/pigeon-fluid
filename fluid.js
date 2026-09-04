@@ -4,7 +4,7 @@
     SIM_RESOLUTION:128, PRESSURE_ITERATIONS:18, FORCE:5200, SPLAT_RADIUS:0.018,
     VELOCITY_DISSIPATION:0.992, DYE_DISSIPATION:0.986,
     COLOR_SLOW:"#d9e4ce", COLOR_FAST:"#f0c64d", HIGHLIGHT:"#fff8e8",
-    HIGHLIGHT_AMOUNT:0.12, DYE_AMOUNT:1.35, BACKGROUND:"#0b0b0c",
+    HIGHLIGHT_AMOUNT:0.12, DYE_AMOUNT:1.35,DYE_AMOUNT: 1.35, BLEND_MODE: "ink", INK_OPACITY: 0.85, BACKGROUND: "#0b0b0c",
     HOVER_INTERACTION:true, IDLE_MOTION:true, IDLE_INTERVAL_MS:2200,
     IDLE_FORCE:0.32, HIDE_HINT_ON_INTERACTION:true
   }, window.FLUID_CONFIG || {});
@@ -42,9 +42,97 @@
   precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uTarget; uniform vec2 uPoint; uniform float uRadius,uAspect; uniform vec3 uValue;
   void main(){ vec2 p=vUv-uPoint; p.x*=uAspect; float f=exp(-dot(p,p)/max(uRadius,.000001)); outColor=texture(uTarget,vUv)+vec4(uValue*f,0); }`;
 
-  const DISPLAY = `#version 300 es
-  precision highp float; in vec2 vUv; out vec4 outColor; uniform sampler2D uDye; uniform vec3 uBackground;
-  void main(){ vec3 d=texture(uDye,vUv).rgb; d=d/(1.+d); outColor=vec4(uBackground+d,1); }`;
+const DISPLAY = `#version 300 es
+    precision highp float;
+
+    in vec2 vUv;
+    out vec4 outColor;
+
+    uniform sampler2D uDye;
+    uniform vec3 uBackground;
+    uniform int uBlendMode;
+    uniform float uInkOpacity;
+
+    void main() {
+
+      vec3 rawDye = texture(uDye, vUv).rgb;
+
+      // Keeps accumulated dye values in a manageable 0–1-ish range.
+      vec3 dye = rawDye / (1.0 + rawDye);
+
+      // Estimate how much pigment exists here.
+      float density = max(
+        dye.r,
+        max(dye.g, dye.b)
+      );
+
+      density = clamp(
+        density * uInkOpacity,
+        0.0,
+        1.0
+      );
+
+      vec3 color;
+
+      // ----------------------------------
+      // 0 — ADDITIVE / LIGHT
+      // ----------------------------------
+      if (uBlendMode == 0) {
+
+        color = uBackground + dye;
+
+      }
+
+      // ----------------------------------
+      // 1 — INK / LERP
+      // ----------------------------------
+      else if (uBlendMode == 1) {
+
+        color = mix(
+          uBackground,
+          dye,
+          density
+        );
+
+      }
+
+      // ----------------------------------
+      // 2 — MULTIPLY
+      // ----------------------------------
+      else if (uBlendMode == 2) {
+
+        vec3 multiplied = uBackground * dye;
+
+        color = mix(
+          uBackground,
+          multiplied,
+          density
+        );
+
+      }
+
+      // ----------------------------------
+      // 3 — SUBTRACTIVE-ISH PIGMENT
+      // ----------------------------------
+      else {
+
+        // Convert RGB pigment toward absorption.
+        vec3 absorption = vec3(1.0) - dye;
+
+        // More overlapping pigment means more absorbed light.
+        vec3 transmitted = exp(
+          -absorption * density * 3.0
+        );
+
+        color = uBackground * transmitted;
+
+      }
+
+      color = clamp(color, 0.0, 1.0);
+
+      outColor = vec4(color, 1.0);
+    }
+`;
 
   function shader(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
   function program(fs){ const p=gl.createProgram(); gl.attachShader(p,shader(gl.VERTEX_SHADER,VERT)); gl.attachShader(p,shader(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
@@ -76,8 +164,49 @@
   function mix(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]}
   const slow=hex(cfg.COLOR_SLOW),fast=hex(cfg.COLOR_FAST),hi=hex(cfg.HIGHLIGHT),bg=hex(cfg.BACKGROUND);
   function interact(x,y,dx,dy,strength=1){const speed=Math.min(1,Math.hypot(dx,dy)/45);let c=mix(slow,fast,speed);c=mix(c,hi,cfg.HIGHLIGHT_AMOUNT);splat(velocity,x,y,dx*cfg.FORCE*strength/Math.max(canvas.width,1),dy*cfg.FORCE*strength/Math.max(canvas.height,1),0,cfg.SPLAT_RADIUS);splat(dye,x,y,c[0]*cfg.DYE_AMOUNT*strength,c[1]*cfg.DYE_AMOUNT*strength,c[2]*cfg.DYE_AMOUNT*strength,cfg.SPLAT_RADIUS*1.2);if(cfg.HIDE_HINT_ON_INTERACTION&&hint)hint.classList.add("hidden");}
-  function render(){const p=P.display;use(p);bind(0,dye.read.texture,p,"uDye");gl.uniform3f(u(p,"uBackground"),bg[0],bg[1],bg[2]);draw(null)}
+function render() {
+    const p = programs.display;
+    use(p);
 
+    bindTexture(
+      0,
+      dye.read.texture,
+      p,
+      "uDye"
+    );
+
+    const bg = hex(cfg.BACKGROUND);
+
+    gl.uniform3f(
+      uniform(p, "uBackground"),
+      bg[0],
+      bg[1],
+      bg[2]
+    );
+
+    // Convert readable config names into shader numbers.
+    const blendModes = {
+      add: 0,
+      ink: 1,
+      multiply: 2,
+      pigment: 3
+    };
+
+    const mode =
+      blendModes[cfg.BLEND_MODE] ?? 1;
+
+    gl.uniform1i(
+      uniform(p, "uBlendMode"),
+      mode
+    );
+
+    gl.uniform1f(
+      uniform(p, "uInkOpacity"),
+      cfg.INK_OPACITY
+    );
+
+    drawTo(null);
+}
   const pointers=new Map();
   function pos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:1-(e.clientY-r.top)/r.height}}
   canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);const p=pos(e);p.down=true;pointers.set(e.pointerId,p)});
