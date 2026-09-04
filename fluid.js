@@ -4,7 +4,7 @@
     SIM_RESOLUTION:128, PRESSURE_ITERATIONS:18, FORCE:5200, SPLAT_RADIUS:0.018,
     VELOCITY_DISSIPATION:0.992, DYE_DISSIPATION:0.986,
     COLOR_SLOW:"#d9e4ce", COLOR_FAST:"#f0c64d", HIGHLIGHT:"#fff8e8",
-    HIGHLIGHT_AMOUNT:0.12, DYE_AMOUNT:1.35,DYE_AMOUNT: 1.35, BLEND_MODE: "ink", INK_OPACITY: 0.85, BACKGROUND: "#0b0b0c",
+    HIGHLIGHT_AMOUNT:0.12, DYE_AMOUNT:1.35, BLEND_MODE: "ink", INK_OPACITY: 0.85, BACKGROUND: "#0b0b0c",
     HOVER_INTERACTION:true, IDLE_MOTION:true, IDLE_INTERVAL_MS:2200,
     IDLE_FORCE:0.32, HIDE_HINT_ON_INTERACTION:true
   }, window.FLUID_CONFIG || {});
@@ -165,47 +165,49 @@ const DISPLAY = `#version 300 es
   const slow=hex(cfg.COLOR_SLOW),fast=hex(cfg.COLOR_FAST),hi=hex(cfg.HIGHLIGHT),bg=hex(cfg.BACKGROUND);
   function interact(x,y,dx,dy,strength=1){const speed=Math.min(1,Math.hypot(dx,dy)/45);let c=mix(slow,fast,speed);c=mix(c,hi,cfg.HIGHLIGHT_AMOUNT);splat(velocity,x,y,dx*cfg.FORCE*strength/Math.max(canvas.width,1),dy*cfg.FORCE*strength/Math.max(canvas.height,1),0,cfg.SPLAT_RADIUS);splat(dye,x,y,c[0]*cfg.DYE_AMOUNT*strength,c[1]*cfg.DYE_AMOUNT*strength,c[2]*cfg.DYE_AMOUNT*strength,cfg.SPLAT_RADIUS*1.2);if(cfg.HIDE_HINT_ON_INTERACTION&&hint)hint.classList.add("hidden");}
 function render() {
-    const p = programs.display;
-    use(p);
+  const p = P.display;
 
-    bindTexture(
-      0,
-      dye.read.texture,
-      p,
-      "uDye"
-    );
+  use(p);
 
-    const bg = hex(cfg.BACKGROUND);
+  bind(
+    0,
+    dye.read.texture,
+    p,
+    "uDye"
+  );
 
-    gl.uniform3f(
-      uniform(p, "uBackground"),
-      bg[0],
-      bg[1],
-      bg[2]
-    );
+  const background = hex(cfg.BACKGROUND);
 
-    // Convert readable config names into shader numbers.
-    const blendModes = {
-      add: 0,
-      ink: 1,
-      multiply: 2,
-      pigment: 3
-    };
+  gl.uniform3f(
+    u(p, "uBackground"),
+    background[0],
+    background[1],
+    background[2]
+  );
 
-    const mode =
-      blendModes[cfg.BLEND_MODE] ?? 1;
+  const blendModes = {
+    add: 0,
+    ink: 1,
+    multiply: 2,
+    pigment: 3
+  };
 
-    gl.uniform1i(
-      uniform(p, "uBlendMode"),
-      mode
-    );
+  const mode =
+    blendModes[cfg.BLEND_MODE] !== undefined
+      ? blendModes[cfg.BLEND_MODE]
+      : 1;
 
-    gl.uniform1f(
-      uniform(p, "uInkOpacity"),
-      cfg.INK_OPACITY
-    );
+  gl.uniform1i(
+    u(p, "uBlendMode"),
+    mode
+  );
 
-    drawTo(null);
+  gl.uniform1f(
+    u(p, "uInkOpacity"),
+    cfg.INK_OPACITY
+  );
+
+  draw(null);
 }
   const pointers=new Map();
   function pos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:1-(e.clientY-r.top)/r.height}}
