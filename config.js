@@ -6,12 +6,27 @@ window.FLUID_CONFIG = {
   SPLAT_RADIUS: 0.018,
   VELOCITY_DISSIPATION: 0.992,
   DYE_DISSIPATION: 0.986,
-  COLOR_SLOW: "#F3EEE2",
-  COLOR_FAST: "#eef7ff",
-  HIGHLIGHT: "#e3fcff",
-  HIGHLIGHT_AMOUNT: 0.12,
+  COLOR_SLOW: "#7192AD",
+  COLOR_FAST: "#37a0f7",
+  HIGHLIGHT: "#F3EEE2",
+  HIGHLIGHT_AMOUNT: 0.1,
   DYE_AMOUNT: 1.35,
-  BACKGROUND: "#7192AD",
+
+  // ---------- COLOR BLENDING ----------
+
+  // Options:
+  // "add"       = glowing/light behavior
+  // "ink"       = lerp between background and pigment
+  // "multiply"  = Photoshop-style multiply
+  // "pigment"   = subtractive-ish pigment mixing
+  BLEND_MODE: "ink",
+
+  // Controls how strongly the dye covers/darkens the background.
+  // Mostly used by ink, multiply, and pigment modes.
+  INK_OPACITY: 0.85,
+
+  // ---------- BACKGROUND ----------
+  BACKGROUND: "#F3EEE2",
   HOVER_INTERACTION: true,
   IDLE_MOTION: true,
   IDLE_INTERVAL_MS: 2200,
