@@ -26,7 +26,7 @@ window.FLUID_CONFIG = {
   INK_OPACITY: 0.85,
 
   // ---------- BACKGROUND ----------
-  BACKGROUND: "#F3EEE2",
+  BACKGROUND: "#7192AD",
   HOVER_INTERACTION: true,
   IDLE_MOTION: true,
   IDLE_INTERVAL_MS: 2200,
